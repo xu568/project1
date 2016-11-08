@@ -201,10 +201,81 @@ def index():
 @app.route('/login', methods=['POST'])
 def login():
     email = request.form['username']
+    if len(email) == 0:
+      return render_template("index.html", error_message="Email cannot be empty")
+    if '@' not in email:
+      return render_template("index.html", error_message="Invalid email address")
     password = request.form['password']
-    cmd = 'SELECT password FROM users WHERE email = (:name1) and password = (:name2)';
-    cursor = g.conn.execute(text(cmd), name1 = email, name2 = password);
-    return redirect('/')
+    if len(password) == 0:
+      return render_template("index.html", error_message="Password cannot be empty")
+    res = g.conn.execute('SELECT nickname FROM users WHERE email = (%s) and password = (%s)', email, password).fetchall();
+    if len(res) == 0:
+      return render_template("index.html", error_message="Incorrect login info")
+    else:
+      print res[0]['nickname']
+      return render_template("main.html", username=res[0]['nickname'])
+
+@app.route('/new', methods=['POST'])
+def new_acc():
+  return render_template("anotherfile.html")
+
+@app.route('/register', methods=['POST'])
+def register():
+  email = request.form['username']
+  if len(email) == 0:
+    return render_template("anotherfile.html", error_message="Email cannot be empty")
+  if '@' not in email:
+    return render_template("anotherfile.html", error_message="Invalid email address")
+  res = g.conn.execute('SELECT * FROM users WHERE email = (%s)', email).fetchall();
+  if len(res) != 0:
+    return render_template("anotherfile.html", error_message="Email address has been registered")
+  password = request.form['password']
+  if len(password) < 6:
+    return render_template("anotherfile.html", error_message="Password is too short")
+  nickname = request.form['nickname']
+  g.conn.execute('INSERT INTO users VALUES (%s), (%s), (%s)', nickname, password, email)
+  return render_template("index.html", error_message="Register successfully!")
+
+@app.route('/searchMovies', methods=['POST'])
+def searchMovies():
+  title = request.form['movie_title']
+  if len(title) == 0:
+    return render_template("main.html", error_message="Movie Title cannot be empty")
+    
+  # basic info of the movie
+  movie_info = g.conn.execute('SELECT * FROM movie where title = (%s)', title).fetchall();
+  if len(movie_info) == 0:
+    return render_template("main.html", error_message="404 NOT FOUND!")
+  date = movie_info[0]['release_date']
+  m_type = movie_info[0]['type']
+  lang = movie_info[0]['language']
+  desc = movie_info[0]['description']
+  mid = movie_info[0]['mid']
+    
+  # avg rate of the movie
+  avg = g.conn.execute('SELECT round(avg(rate), 1) FROM rate where mid = (%s) group by mid', mid).fetchall()
+  avg = avg[0]['round']
+  print avg
+
+  # actor of the movie and their corresponding charactor
+  act = g.conn.execute('SELECT name, character_name FROM actor_of, people WHERE actor_of.mid = (%s) and actor_of.pid = people.pid', mid).fetchall()
+  actor = {}
+  for row in act:
+    actor[row['name']] = row['character_name']
+
+  # director of the movie
+  director = g.conn.execute('SELECT name FROM directed_by, people WHERE directed_by.mid=(%s) and directed_by.pid = people.pid', mid).fetchall()
+  direct = []
+  for row in director:
+    direct.append(row['name'])
+
+  # movie company of the movie
+  company = g.conn.execute('SELECT name from company, made_by where made_by.mid=(%s) and made_by.cid = company.cid', mid).fetchall()
+  com = []
+  for row in company:
+    com.append(row['name'])
+
+  return render_template('output.html', mtitle=title, type=m_type, date=date, desc = desc, avg=avg, act=actor, director=direct, company=com)
 
 
 if __name__ == "__main__":
