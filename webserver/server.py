@@ -208,12 +208,12 @@ def login():
     password = request.form['password']
     if len(password) == 0:
       return render_template("index.html", error_message="Password cannot be empty")
-    res = g.conn.execute('SELECT nickname FROM users WHERE email = (%s) and password = (%s)', email, password).fetchall();
+    res = g.conn.execute('SELECT nickname, pid FROM users WHERE email = (%s) and password = (%s)', email, password).fetchall();
     if len(res) == 0:
       return render_template("index.html", error_message="Incorrect login info")
     else:
       print res[0]['nickname']
-      return render_template("main.html", username=res[0]['nickname'])
+      return render_template("main.html", username=res[0]['nickname'], pid = res[0]['pid'])
 
 @app.route('/new', methods=['POST'])
 def new_acc():
@@ -275,7 +275,140 @@ def searchMovies():
   for row in company:
     com.append(row['name'])
 
-  return render_template('output.html', mtitle=title, type=m_type, date=date, desc = desc, avg=avg, act=actor, director=direct, company=com)
+  # Trailer of the movie
+  trailer = g.conn.execute('SELECT link, view_count, date_released, version from trailer, trailer_of where trailer_of.mid = (%s) and trailer_of.tid = trailer.tid order by version', mid).fetchall()
+  t = []
+  for row in trailer:
+    r = []
+    r.append(row['link'])
+    r.append(row['view_count'])
+    r.append(row['date_released'])
+    r.append(row['version'])
+    t.append(r)
+
+  return render_template('output.html', mtitle=title, type=m_type, date=date, desc = desc, avg=avg, act=actor, director=direct, company=com, trailer = t)
+
+
+
+@app.route('/searchActor', methods=['POST'])
+def searchActor():
+  actor = request.form['actor_name']
+  if len(actor) == 0:
+    return render_template("main.html", error_message="Actor Name cannot be empty")
+    
+  # basic info of actor
+  actor_info = g.conn.execute('SELECT * FROM actor, people where actor.pid=people.pid and people.name = (%s)', actor).fetchall();
+  if len(actor_info) == 0:
+    return render_template("main.html", error_message="404 NOT FOUND!")
+  dateofBirth = actor_info[0]['date_of_birth']
+  country = actor_info[0]['country']
+  tradeMark = actor_info[0]['trade_mark']
+  pid = actor_info[0]['pid']
+  
+  #known for
+  knownfor_info = g.conn.execute('SELECT * FROM movie_maker where movie_maker.pid=(%s)', pid).fetchall();
+  knownfor=knownfor_info[0]['known_for']
+  
+  # basic info of the movie
+  movie_info = g.conn.execute('SELECT * FROM actor_of, movie WHERE actor_of.pid = (%s) and actor_of.mid = movie.mid', pid).fetchall()
+  title=[]
+  mid=[]
+  date=[]
+  m_type=[]
+  desc=[]
+  for row in movie_info:
+      mid.append(row['mid'])
+      title.append(row['title'])
+      date.append(row['release_date'])
+      m_type.append(row['type'])
+      desc.append(row['description'])
+
+  
+  return render_template('outputactor.html', aname=actor, dob=dateofBirth, country=country, tmark = tradeMark, knfor=knownfor, mtitle=title, type=m_type, date=date, desc = desc)
+
+
+@app.route('/searchDirector', methods=['POST'])
+def searchDirector():
+  director = request.form['director_name']
+  if len(director) == 0:
+    return render_template("main.html", error_message="Director Name cannot be empty")
+    
+  # basic info of director
+  director_info = g.conn.execute('SELECT * FROM director, people where director.pid=people.pid and people.name = (%s)', director).fetchall();
+  if len(director_info ) == 0:
+    return render_template("main.html", error_message="404 NOT FOUND!")
+  dateofBirth = director_info[0]['date_of_birth']
+  country = director_info[0]['country']
+  bio = director_info[0]['bio']
+  pid = director_info[0]['pid']
+  
+  #known for
+  knownfor_info = g.conn.execute('SELECT * FROM movie_maker where movie_maker.pid=(%s)', pid).fetchall();
+  knownfor=knownfor_info[0]['known_for']
+  
+  # basic info of the movie
+  movie_info = g.conn.execute('SELECT * FROM Directed_by, movie WHERE Directed_by.pid = (%s) and Directed_by.mid = movie.mid', pid).fetchall()
+  mid=[]  
+  title=[]
+  date=[]
+  m_type=[]
+  desc=[]
+  for row in movie_info:
+      mid.append(row['mid'])
+      title.append(row['title'])
+      date.append(row['release_date'])
+      m_type.append(row['type'])
+      desc.append(row['description'])
+      
+  
+
+  return render_template('outputdirector.html', dname=director, dob=dateofBirth, country=country, bio = bio, knfor=knownfor, mtitle=title, type=m_type, date=date, desc = desc)
+
+@app.route('/searchCompany', methods=['POST'])
+def searchCompany():
+  company = request.form['company_name']
+  if len(company) == 0:
+    return render_template("main.html", error_message="Company Name cannot be empty")
+    
+  # basic info of company
+  company_info = g.conn.execute('SELECT * FROM Company where company.name = (%s)', company).fetchall();
+  if len(company_info) == 0:
+    return render_template("main.html", error_message="404 NOT FOUND!")
+  country = company_info[0]['country']
+  webpage = company_info[0]['webpage']
+  webpage='http://'+webpage
+  cid = company_info[0]['cid']
+  
+  # basic info of the movie
+  movie_info= g.conn.execute('SELECT * FROM Made_by, movie WHERE Made_by.cid = (%s) and Made_by.mid = movie.mid', cid).fetchall()
+  mov=[]  
+  for row in movie_info:
+    mov.append(row['title'])
+    print mov
+  
+
+  return render_template('outputcompany.html', cname=company, country=country, website=webpage, movie=mov)
+
+@app.route('/rater', methods=['POST'])
+def rate():
+  mtitle = request.form['movie_title']
+  rate = request.form['rate']
+  if len(mtitle) == 0:
+    return render_template('main.html', error_message="Please give the name you want to rate")
+  val = 0.0
+  try:
+    val = float(rate)
+  except ValueError:
+    return render_template('main.html', error_message="Rate is not valid")
+  if val <= 0 or val > 10:
+    return render_template('main.html', error_message="Come on! Give a rate in (0, 10]")
+
+  res = g.conn.execute('SELECT * FROM movie where movie_title = (%s)', mtitle).fetchall()
+  if len(res) == 0:
+    return render_template('main.html', error_message="Oops! Movie is not found in the system!")
+  mid = res[0]['mid']
+  return render_template('main.html')
+
 
 
 if __name__ == "__main__":
