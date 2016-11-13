@@ -8,19 +8,25 @@
      <div><font size="5"><b>Known for: </b>{{knfor}}</font></div>
 
      <div><font size="5"><b>Movie title: </b></font></div>
-	{% for n in mtitle %}
-		<div><font size="5">{{n}}</font></div>
-     {% endfor %}
-     <div><font size="5"><b>Release Date: </b></font></div>
-	{% for n in date %}
-		<div><font size="5">{{n}}</font></div>
-     {% endfor %}
-     <div><font size="5"><b>Type: </b></font></div>
-	{% for n in type %}
-		<div><font size="5">{{n}}</font></div>
-     {% endfor %}
-     <div><font size="5"><b>Description: </b></font></div>
-	{% for n in desc %}
-		<div><font size="5">{{n}}</font></div>
-      {% endfor %}
+      <table border="1">
+		<tr>
+			<td><font size="5">Movie Title</font>
+			</td>
+			<td><font size="5">Release Date</font>
+			</td>
+			<td><font size="5">Type</font>
+			</td>
+			<td><font size="5">Description</font>
+			</td>
+		</tr>
+		{% for n in movie %}
+		  <tr>
+		  	{% for d in n %}
+		  	  <td>{{d}}</td>
+		  	  {% else %}
+		  	  No Movie Info Found!
+		  	{% endfor %}
+		  </tr>
+		{% endfor %}
+	</table>
 </body>

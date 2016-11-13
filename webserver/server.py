@@ -19,6 +19,7 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response
+from datetime import datetime
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -212,7 +213,8 @@ def login():
     if len(res) == 0:
       return render_template("index.html", error_message="Incorrect login info")
     else:
-      print res[0]['nickname']
+      username = res[0]['nickname']
+      people_id = res[0]['pid']
       return render_template("main.html", username=res[0]['nickname'], pid = res[0]['pid'])
 
 @app.route('/new', methods=['POST'])
@@ -239,13 +241,15 @@ def register():
 @app.route('/searchMovies', methods=['POST'])
 def searchMovies():
   title = request.form['movie_title']
+  username = request.form['username']
+  people_id = request.form['pid']
   if len(title) == 0:
-    return render_template("main.html", error_message="Movie Title cannot be empty")
+    return render_template("main.html", username=username, pid=people_id, error_message="Movie Title cannot be empty")
     
   # basic info of the movie
   movie_info = g.conn.execute('SELECT * FROM movie where title = (%s)', title).fetchall();
   if len(movie_info) == 0:
-    return render_template("main.html", error_message="404 NOT FOUND!")
+    return render_template("main.html", username=username, pid=people_id, error_message="404 NOT FOUND!")
   date = movie_info[0]['release_date']
   m_type = movie_info[0]['type']
   lang = movie_info[0]['language']
@@ -293,13 +297,15 @@ def searchMovies():
 @app.route('/searchActor', methods=['POST'])
 def searchActor():
   actor = request.form['actor_name']
+  username = request.form['username']
+  people_id = request.form['pid']
   if len(actor) == 0:
-    return render_template("main.html", error_message="Actor Name cannot be empty")
+    return render_template("main.html", username=username, pid=people_id, error_message="Actor Name cannot be empty")
     
   # basic info of actor
   actor_info = g.conn.execute('SELECT * FROM actor, people where actor.pid=people.pid and people.name = (%s)', actor).fetchall();
   if len(actor_info) == 0:
-    return render_template("main.html", error_message="404 NOT FOUND!")
+    return render_template("main.html",username=username, pid=people_id, error_message="404 NOT FOUND!")
   dateofBirth = actor_info[0]['date_of_birth']
   country = actor_info[0]['country']
   tradeMark = actor_info[0]['trade_mark']
@@ -311,32 +317,31 @@ def searchActor():
   
   # basic info of the movie
   movie_info = g.conn.execute('SELECT * FROM actor_of, movie WHERE actor_of.pid = (%s) and actor_of.mid = movie.mid', pid).fetchall()
-  title=[]
-  mid=[]
-  date=[]
-  m_type=[]
-  desc=[]
+  m=[]
   for row in movie_info:
-      mid.append(row['mid'])
-      title.append(row['title'])
-      date.append(row['release_date'])
-      m_type.append(row['type'])
-      desc.append(row['description'])
+      r=[]
+      r.append(row['title'])
+      r.append(row['release_date'])
+      r.append(row['type'])
+      r.append(row['description'])
+      m.append(r)
 
   
-  return render_template('outputactor.html', aname=actor, dob=dateofBirth, country=country, tmark = tradeMark, knfor=knownfor, mtitle=title, type=m_type, date=date, desc = desc)
+  return render_template('outputactor.html', aname=actor, dob=dateofBirth, country=country, tmark = tradeMark, knfor=knownfor, movie=m)
 
 
 @app.route('/searchDirector', methods=['POST'])
 def searchDirector():
   director = request.form['director_name']
+  username = request.form['username']
+  people_id = request.form['pid']
   if len(director) == 0:
-    return render_template("main.html", error_message="Director Name cannot be empty")
+    return render_template("main.html",username=username, pid=people_id, error_message="Director Name cannot be empty")
     
   # basic info of director
   director_info = g.conn.execute('SELECT * FROM director, people where director.pid=people.pid and people.name = (%s)', director).fetchall();
   if len(director_info ) == 0:
-    return render_template("main.html", error_message="404 NOT FOUND!")
+    return render_template("main.html",username=username, pid=people_id, error_message="404 NOT FOUND!")
   dateofBirth = director_info[0]['date_of_birth']
   country = director_info[0]['country']
   bio = director_info[0]['bio']
@@ -348,32 +353,29 @@ def searchDirector():
   
   # basic info of the movie
   movie_info = g.conn.execute('SELECT * FROM Directed_by, movie WHERE Directed_by.pid = (%s) and Directed_by.mid = movie.mid', pid).fetchall()
-  mid=[]  
-  title=[]
-  date=[]
-  m_type=[]
-  desc=[]
+  m=[]
   for row in movie_info:
-      mid.append(row['mid'])
-      title.append(row['title'])
-      date.append(row['release_date'])
-      m_type.append(row['type'])
-      desc.append(row['description'])
-      
-  
+    r=[]
+    r.append(row['title'])
+    r.append(row['release_date'])
+    r.append(row['type'])
+    r.append(row['description'])
+    m.append(r)
 
-  return render_template('outputdirector.html', dname=director, dob=dateofBirth, country=country, bio = bio, knfor=knownfor, mtitle=title, type=m_type, date=date, desc = desc)
+  return render_template('outputdirector.html', dname=director, dob=dateofBirth, country=country, bio = bio, knfor=knownfor, movie=m)
 
 @app.route('/searchCompany', methods=['POST'])
 def searchCompany():
   company = request.form['company_name']
+  username = request.form['username']
+  people_id = request.form['pid']
   if len(company) == 0:
-    return render_template("main.html", error_message="Company Name cannot be empty")
+    return render_template("main.html",username=username, pid=people_id, error_message="Company Name cannot be empty")
     
   # basic info of company
   company_info = g.conn.execute('SELECT * FROM Company where company.name = (%s)', company).fetchall();
   if len(company_info) == 0:
-    return render_template("main.html", error_message="404 NOT FOUND!")
+    return render_template("main.html",username=username, pid=people_id, error_message="404 NOT FOUND!")
   country = company_info[0]['country']
   webpage = company_info[0]['webpage']
   webpage='http://'+webpage
@@ -393,21 +395,32 @@ def searchCompany():
 def rate():
   mtitle = request.form['movie_title']
   rate = request.form['rate']
+  username = request.form['username']
+  pid = request.form['pid']
+  print mtitle
+  print rate
+  print pid
   if len(mtitle) == 0:
-    return render_template('main.html', error_message="Please give the name you want to rate")
-  val = 0.0
+    return render_template('main.html',username=username, pid=pid, error_message="Please give the name you want to rate")
+  val = 0
   try:
-    val = float(rate)
+    val = int(rate)
   except ValueError:
-    return render_template('main.html', error_message="Rate is not valid")
+    return render_template('main.html',username=username, pid=pid, error_message="Rate is not valid")
   if val <= 0 or val > 10:
-    return render_template('main.html', error_message="Come on! Give a rate in (0, 10]")
+    return render_template('main.html',username=username, pid=pid, error_message="Come on! Give a rate in (0, 10]")
 
-  res = g.conn.execute('SELECT * FROM movie where movie_title = (%s)', mtitle).fetchall()
+
+  res = g.conn.execute('SELECT * FROM movie where title = (%s)', mtitle).fetchall()
   if len(res) == 0:
-    return render_template('main.html', error_message="Oops! Movie is not found in the system!")
+    return render_template('main.html',username=username, pid=pid, error_message="Oops! Movie is not found in the system!")
   mid = res[0]['mid']
-  return render_template('main.html')
+  ts = datetime.now().strftime('%Y-%m-%d')
+  res = g.conn.execute("SELECT * from rate where pid = (%s) and mid = (%s) and time = (%s)", pid, mid, ts).fetchall()
+  if len(res) != 0:
+    return render_template('main.html',username=username, pid=pid, error_message="Oops! You can only rate the same movie on the same day once!")
+  res = g.conn.execute("INSERT INTO rate values ((%s), (%s), (%s), %s)", pid, mid, rate, ts)
+  return render_template('afterRate.html')
 
 
 

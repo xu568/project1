@@ -4,6 +4,8 @@
 	<p>{{error_message}}</p>
 	<table>
 		<form name="movies" method="post" action="/searchMovies" id="a1">
+			<input type="hidden" value={{pid}} name="pid"/>
+			<input type="hidden" value={{username}} name="username"/>
 			<tr>
 				<td class="a1_label"><b><font size="5">Search movie title:   </font></b></td>
 				<td>
@@ -16,6 +18,8 @@
 		</form>
 
 		<form name="actors" method="post" action="/searchActor" id="a2">
+			<input type="hidden" value={{pid}} name="pid"/>
+			<input type="hidden" value={{username}} name="username"/>
 			<tr>
 				<td class="a2_label"><b><font size="5">Search actor:   </font></b></td>
 				<td>
@@ -28,6 +32,8 @@
 		</form>
 
 		<form name="directors" method="post" action="/searchDirector" id="a3">
+			<input type="hidden" value={{pid}} name="pid"/>
+			<input type="hidden" value={{username}} name="username"/>
 			<tr>
 				<td class="a3_label"><b><font size="5">Search director:   </font></b></td>
 				<td>
@@ -40,6 +46,8 @@
 		</form>
 
 		<form name="company" method="post" action="/searchCompany" id="a4">
+			<input type="hidden" value={{pid}} name="pid"/>
+			<input type="hidden" value={{username}} name="username"/>
 			<tr>
 				<td class="a4_label"><b><font size="5">Search company:   </font></b></td>
 				<td>
@@ -52,6 +60,8 @@
 		</form>
 
 		<form name="rate" method="post" action="/rater" id="r">
+			<input type="hidden" value={{pid}} name="pid"/>
+			<input type="hidden" value={{username}} name="username"/>
 			<tr>
 				<td class="r_label"><b><font size="5">Rate a movie:   </font></b></td>
 			</tr>
