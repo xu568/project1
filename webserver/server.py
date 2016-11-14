@@ -235,7 +235,11 @@ def register():
   if len(password) < 6:
     return render_template("anotherfile.html", error_message="Password is too short")
   nickname = request.form['nickname']
-  g.conn.execute('INSERT INTO users VALUES (%s), (%s), (%s)', nickname, password, email)
+  res = g.conn.execute('SELECT count(*) from people').fetchall();
+  count = res[0]['count']
+  pid = count + 1
+  g.conn.execute('INSERT INTO users VALUES ((%s), (%s), (%s), (%s))',pid, nickname, password, email)
+  g.conn.execute('INSERT INTO people VALUES ((%s), (%s), (%s), (%s))', pid, '', '1900-1-1', '')
   return render_template("index.html", error_message="Register successfully!")
 
 @app.route('/searchMovies', methods=['POST'])
@@ -245,11 +249,16 @@ def searchMovies():
   people_id = request.form['pid']
   if len(title) == 0:
     return render_template("main.html", username=username, pid=people_id, error_message="Movie Title cannot be empty")
-    
+  
+  title = '%' + title.lower() + '%'
+
   # basic info of the movie
-  movie_info = g.conn.execute('SELECT * FROM movie where title = (%s)', title).fetchall();
+  cmd= 'SELECT * FROM movie where Lower(title) like :name1';
+  movie_info= g.conn.execute(text(cmd), name1=title).fetchall();
+  #movie_info = g.conn.execute('SELECT * FROM movie where title = (%s)', title).fetchall();
   if len(movie_info) == 0:
     return render_template("main.html", username=username, pid=people_id, error_message="404 NOT FOUND!")
+  m_title=movie_info[0]['title']
   date = movie_info[0]['release_date']
   m_type = movie_info[0]['type']
   lang = movie_info[0]['language']
@@ -290,7 +299,7 @@ def searchMovies():
     r.append(row['version'])
     t.append(r)
 
-  return render_template('output.html', mtitle=title, type=m_type, date=date, desc = desc, avg=avg, act=actor, director=direct, company=com, trailer = t)
+  return render_template('output.html', mtitle=m_title, type=m_type, date=date, desc = desc, avg=avg, act=actor, director=direct, company=com, trailer = t)
 
 
 
@@ -301,11 +310,15 @@ def searchActor():
   people_id = request.form['pid']
   if len(actor) == 0:
     return render_template("main.html", username=username, pid=people_id, error_message="Actor Name cannot be empty")
-    
+  
+  actor = '%' + actor.lower() + '%'  
   # basic info of actor
-  actor_info = g.conn.execute('SELECT * FROM actor, people where actor.pid=people.pid and people.name = (%s)', actor).fetchall();
+  cmd = 'SELECT * FROM actor,people where actor.pid=people.pid and Lower(people.name) like :name1';
+  actor_info = g.conn.execute(text(cmd), name1=actor).fetchall();
+  #actor_info = g.conn.execute('SELECT * FROM actor, people where actor.pid=people.pid and people.name = (%s)', actor).fetchall();
   if len(actor_info) == 0:
     return render_template("main.html",username=username, pid=people_id, error_message="404 NOT FOUND!")
+  actor_name = actor_info[0]['name']
   dateofBirth = actor_info[0]['date_of_birth']
   country = actor_info[0]['country']
   tradeMark = actor_info[0]['trade_mark']
@@ -327,7 +340,7 @@ def searchActor():
       m.append(r)
 
   
-  return render_template('outputactor.html', aname=actor, dob=dateofBirth, country=country, tmark = tradeMark, knfor=knownfor, movie=m)
+  return render_template('outputactor.html', aname=actor_name, dob=dateofBirth, country=country, tmark = tradeMark, knfor=knownfor, movie=m)
 
 
 @app.route('/searchDirector', methods=['POST'])
@@ -338,10 +351,14 @@ def searchDirector():
   if len(director) == 0:
     return render_template("main.html",username=username, pid=people_id, error_message="Director Name cannot be empty")
     
+  director = '%' + director.lower() + '%'  
   # basic info of director
-  director_info = g.conn.execute('SELECT * FROM director, people where director.pid=people.pid and people.name = (%s)', director).fetchall();
+  #director_info = g.conn.execute('SELECT * FROM director, people where director.pid=people.pid and people.name = (%s)', director).fetchall();
+  cmd= 'SELECT * FROM director,people where director.pid=people.pid and Lower(people.name) like :name1';
+  director_info= g.conn.execute(text(cmd), name1=director).fetchall();
   if len(director_info ) == 0:
     return render_template("main.html",username=username, pid=people_id, error_message="404 NOT FOUND!")
+  director_name = director_info[0]['name']
   dateofBirth = director_info[0]['date_of_birth']
   country = director_info[0]['country']
   bio = director_info[0]['bio']
@@ -362,7 +379,7 @@ def searchDirector():
     r.append(row['description'])
     m.append(r)
 
-  return render_template('outputdirector.html', dname=director, dob=dateofBirth, country=country, bio = bio, knfor=knownfor, movie=m)
+  return render_template('outputdirector.html', dname=director_name, dob=dateofBirth, country=country, bio = bio, knfor=knownfor, movie=m)
 
 @app.route('/searchCompany', methods=['POST'])
 def searchCompany():
@@ -371,11 +388,15 @@ def searchCompany():
   people_id = request.form['pid']
   if len(company) == 0:
     return render_template("main.html",username=username, pid=people_id, error_message="Company Name cannot be empty")
-    
+
+  company = '%' + company.lower() + '%'
+  cmd= 'SELECT * FROM Company where Lower(company.name) like :name1';
+  company_info= g.conn.execute(text(cmd), name1=company).fetchall();
   # basic info of company
-  company_info = g.conn.execute('SELECT * FROM Company where company.name = (%s)', company).fetchall();
+  #company_info = g.conn.execute('SELECT * FROM Company where company.name = (%s)', company).fetchall();
   if len(company_info) == 0:
     return render_template("main.html",username=username, pid=people_id, error_message="404 NOT FOUND!")
+  company_name = company_info[0]['name']
   country = company_info[0]['country']
   webpage = company_info[0]['webpage']
   webpage='http://'+webpage
@@ -389,7 +410,7 @@ def searchCompany():
     print mov
   
 
-  return render_template('outputcompany.html', cname=company, country=country, website=webpage, movie=mov)
+  return render_template('outputcompany.html', cname=company_name, country=country, website=webpage, movie=mov)
 
 @app.route('/rater', methods=['POST'])
 def rate():
